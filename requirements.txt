@@ -1,0 +1,3 @@
+discord~=1.7.3
+discordSuperUtils~=0.2.9
+aiosqlite~=0.17.0
