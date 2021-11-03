@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import collections
 from datetime import datetime
-from typing import List, TYPE_CHECKING, Tuple
+from typing import List, Tuple, TYPE_CHECKING
 
 import discord
 import discordSuperUtils
@@ -254,6 +254,8 @@ class Sirens(commands.Cog):
         if not self.bot.database:
             return
 
+        sirens = self.sort_sirens(sirens)
+
         for guild in self.bot.guilds:
             channel, cities, zones = await self._get_guild_settings(guild)
 
@@ -274,15 +276,29 @@ class Sirens(commands.Cog):
             sirens_formatted = "\n".join(
                 [self._format_city(x.city) for x in result_sirens]
             )
+
             message = await channel.send(
                 embed=discord.Embed(
                     title="Siren Alert!",
                     description=f"**Locations:**\n {sirens_formatted}",
                     color=0xFF0000,
+                ).add_field(
+                    name="Common Zones",
+                    value=", ".join(x[0] for x in self.get_common_zones(result_sirens)),
                 )
             )
 
             await message.add_reaction("🟥")
+
+    @staticmethod
+    def get_common_zones(sirens: List[Siren]) -> List[Tuple[str, int]]:
+        return collections.Counter(
+            [x.city.zone.en for x in sirens if isinstance(x.city, pikudhaoref.City)]
+        ).most_common(5)
+
+    @staticmethod
+    def sort_sirens(sirens: List[Siren]) -> List[Siren]:
+        return sorted(sirens, key=lambda x: x.city.countdown.seconds)
 
     def _create_siren_paginator(
         self,
