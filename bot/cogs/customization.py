@@ -3,6 +3,7 @@ import discordSuperUtils
 from discord.ext import commands
 
 from bot import SirenBot
+from bot.converters import TableDataConverter
 
 
 class Customization(commands.Cog):
@@ -10,80 +11,46 @@ class Customization(commands.Cog):
         self.bot = bot
 
     @commands.group(invoke_without_command=True)
-    @commands.guild_only()
-    async def cities(self, ctx):
-        city_records = await self.bot.database.select(
-            "cities", ["city"], {"guild": ctx.guild.id}, fetchall=True
+    async def customization(self, ctx):
+        await ctx.send(
+            embed=discord.Embed(
+                title="Commands",
+                description="Usable commands: (list|add|remove)",
+                color=0xFF0000,
+            )
         )
 
-        cities = [city_record["city"] for city_record in city_records]
+    @customization.command()
+    @commands.guild_only()
+    async def list(self, ctx, table_data: TableDataConverter):
+        assert isinstance(table_data, tuple), "table_data is not a tuple"
+        custom_list = await select_custom(table_data, self.bot.database, ctx.guild.id)
+
         await discordSuperUtils.PageManager(
             ctx,
             discordSuperUtils.generate_embeds(
-                cities,
-                "List of cities",
-                f"Shows the list of the custom cities in {ctx.guild}",
-                string_format="City: '{}'",
+                custom_list,
+                f"List of {table_data[0]}",
+                f"Shows the list of the custom {table_data[0]} in {ctx.guild}",
+                string_format=f"{table_data[1]}: '" + "{}'",
             ),
         ).run()
 
-    @cities.command(name="add")
+    @customization.command()
     @commands.guild_only()
-    @commands.has_permissions(administrator=True)
-    async def add_(self, ctx, city_name: str):
-        await self.bot.database.insertifnotexists(
-            "cities",
-            {"guild": ctx.guild.id, "city": city_name},
-            {"guild": ctx.guild.id, "city": city_name},
-        )
-        await ctx.send(f"City '{city_name}' has been added.")
+    async def add(self, ctx, table_data: TableDataConverter, *, value: str):
+        assert isinstance(table_data, tuple), "table_data is not a tuple"
 
-    @cities.command(name="remove")
+        await add_custom(table_data, self.bot.database, ctx.guild.id, value)
+        await ctx.send(f"'{value}' has been added to the {table_data[1]} list.")
+
+    @customization.command()
     @commands.guild_only()
-    @commands.has_permissions(administrator=True)
-    async def remove_(self, ctx, city_name: str):
-        await self.bot.database.delete(
-            "cities", {"guild": ctx.guild.id, "city": city_name}
-        )
-        await ctx.send(f"City '{city_name}' has been removed from the city list.")
+    async def remove(self, ctx, table_data: TableDataConverter, *, value: str):
+        assert isinstance(table_data, tuple), "table_data is not a tuple"
 
-    @commands.group(invoke_without_command=True)
-    @commands.guild_only()
-    async def zones(self, ctx):
-        zone_records = await self.bot.database.select(
-            "zones", ["zone"], {"guild": ctx.guild.id}, fetchall=True
-        )
-
-        cities = [zone_record["city"] for zone_record in zone_records]
-        await discordSuperUtils.PageManager(
-            ctx,
-            discordSuperUtils.generate_embeds(
-                cities,
-                "List of zones",
-                f"Shows the list of the custom zones in {ctx.guild}",
-                string_format="Zone: '{}'",
-            ),
-        ).run()
-
-    @zones.command()
-    @commands.guild_only()
-    @commands.has_permissions(administrator=True)
-    async def add(self, ctx, zone_name: str):
-        await self.bot.database.insertifnotexists(
-            "zones",
-            {"guild": ctx.guild.id, "zone": zone_name},
-            {"guild": ctx.guild.id, "zone": zone_name},
-        )
-        await ctx.send(f"Zone '{zone_name}' has been added.")
-
-    @zones.command()
-    @commands.guild_only()
-    @commands.has_permissions(administrator=True)
-    async def remove(self, ctx, zone_name: str):
-        await self.bot.database.delete(
-            "zones", {"guild": ctx.guild.id, "zone": zone_name}
-        )
-        await ctx.send(f"Zone '{zone_name}' has been removed from the zone list.")
+        await remove_custom(table_data, self.bot.database, ctx.guild.id, value)
+        await ctx.send(f"'{value}' has been removed from the {table_data[1]} list.")
 
     @commands.command()
     @commands.guild_only()
@@ -113,6 +80,37 @@ class Customization(commands.Cog):
         embed.add_field(name="🚨 Custom Zones", value=f"Use {prefix}zones", inline=False)
 
         await ctx.send(embed=embed)
+
+
+async def add_custom(
+    table_data: tuple,
+    database: discordSuperUtils.database.Database,
+    guild_id: int,
+    custom: str,
+):
+    await database.insertifnotexists(
+        table_data[0],
+        {"guild": guild_id, table_data[1]: custom},
+        {"guild": guild_id, table_data[1]: custom},
+    )
+
+
+async def select_custom(
+    table_data: tuple, database: discordSuperUtils.database.Database, guild_id: int
+):
+    records = await database.select(
+        table_data[0], [table_data[1]], {"guild": guild_id}, fetchall=True
+    )
+    return [record[table_data[1]] for record in records]
+
+
+async def remove_custom(
+    table_data: tuple,
+    database: discordSuperUtils.database.Database,
+    guild_id: int,
+    custom: str,
+):
+    await database.delete(table_data[0], {"guild": guild_id, table_data[1]: custom})
 
 
 def setup(bot: SirenBot):

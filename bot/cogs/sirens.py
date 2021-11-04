@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import collections
 from datetime import datetime
 from typing import List, Tuple, TYPE_CHECKING
@@ -9,8 +10,9 @@ import discordSuperUtils
 import pikudhaoref
 from discord.ext import commands
 
+from .customization import select_custom
 from ..core.bot import SirenBot
-from ..converters import DatetimeConverter
+from ..converters import DatetimeConverter, TableDataConverter
 
 if TYPE_CHECKING:
     from pikudhaoref.siren import Siren
@@ -97,14 +99,8 @@ class Sirens(commands.Cog):
         )
 
         embed.add_field(
-            name=f"🏙️ {prefix}cities [add/remove]",
-            value="Add/remove a city.\nNote: These cities are keyword based.",
-            inline=False,
-        )
-
-        embed.add_field(
-            name=f"🚨 {prefix}zones [add/remove]",
-            value="Add/remove a zone.",
+            name=f"🏙️ {prefix}customization [add/remove/list] [city/zone]",
+            value="Add/remove a custom city/zone.\nNote: These cities are keyword based.",
             inline=False,
         )
 
@@ -136,6 +132,14 @@ class Sirens(commands.Cog):
                 (x for x in siren_history if x.city == common_city[0]), None
             )
             last_siren = siren_history[0]
+
+            last_siren.city = self.bot.client.get_city(last_siren.city)
+            last_siren_in_common.city = self.bot.client.get_city(
+                last_siren_in_common.city
+            )
+
+            common_city = list(common_city)
+            common_city[0] = self.bot.client.get_city(common_city[0])
 
             last_siren_text = f"**Date:** {last_siren.datetime}, **Location:** {self._get_city_name(last_siren.city)}"
 
@@ -213,17 +217,14 @@ class Sirens(commands.Cog):
             channel_id = siren_record["siren_channel"]
             channel = guild.get_channel(channel_id)
 
-        city_records = await self.bot.database.select(
-            "cities", ["city"], {"guild": guild.id}, fetchall=True
-        )
-        zone_records = await self.bot.database.select(
-            "zones", ["zone"], {"guild": guild.id}, fetchall=True
-        )
-
         return (
             channel,
-            [city_record["city"] for city_record in city_records],
-            [zone_record["zone"] for zone_record in zone_records],
+            await select_custom(
+                TableDataConverter.TABLE_DICT.get("cities"), self.bot.database, guild.id
+            ),
+            await select_custom(
+                TableDataConverter.TABLE_DICT.get("zones"), self.bot.database, guild.id
+            ),
         )
 
     @staticmethod
@@ -251,8 +252,8 @@ class Sirens(commands.Cog):
         )
 
     async def on_siren(self, sirens: List[Siren]):
-        if not self.bot.database:
-            return
+        while not self.bot.database:
+            await asyncio.sleep(1)
 
         sirens = self.sort_sirens(sirens)
 
