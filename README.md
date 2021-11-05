@@ -16,6 +16,6 @@ Installation
 
 TODO
 ----
-- Rewrite customization.py.
+- None
 
 ### `If you like this project, please consider giving it a star! <3` ###
