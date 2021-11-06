@@ -107,8 +107,8 @@ class Sirens(commands.Cog):
         await ctx.send(embed=embed)
 
     @staticmethod
-    def _get_city_name(city: pikudhaoref.City | str) -> str:
-        return city if isinstance(city, str) else city.name.en
+    def _get_city_name(city: pikudhaoref.City) -> str:
+        return city.name.en or city.name.he
 
     @commands.command()
     async def info(self, ctx):
@@ -229,27 +229,18 @@ class Sirens(commands.Cog):
 
     @staticmethod
     def _check_city_whitelisted(
-        city: pikudhaoref.City | str, cities: List[str], zones: List[str]
+        city: pikudhaoref.City, cities: List[str], zones: List[str]
     ) -> bool:
-        if isinstance(city, str):
-            siren_city_names = [city]
-            siren_zone_names = []
-        else:
-            siren_city_names = city.name.languages
-            siren_zone_names = [x.casefold() for x in city.zone.languages]
+        siren_city_names = [x for x in city.name.languages if x]
+        siren_zone_names = [x.casefold() for x in city.zone.languages if x]
 
         return any(
             any(city.casefold() in siren_city.casefold() for city in cities)
             for siren_city in siren_city_names
         ) or any((zone.casefold() in siren_zone_names for zone in zones))
 
-    @staticmethod
-    def _format_city(city: pikudhaoref.City | str) -> str:
-        return (
-            f"City: {city}, Zone: Unknown, Countdown: Unknown"
-            if isinstance(city, str)
-            else f"City: {city.name.en}, Zone: {city.zone.en}, Countdown: {city.countdown.seconds}"
-        )
+    def _format_city(self, city: pikudhaoref.City) -> str:
+        return f"City: {self._get_city_name(city)}, Zone: {city.zone.en}, Countdown: {city.countdown.seconds}"
 
     async def on_siren(self, sirens: List[Siren]):
         while not self.bot.database:
@@ -278,23 +269,27 @@ class Sirens(commands.Cog):
                 [self._format_city(x.city) for x in result_sirens]
             )
 
-            message = await channel.send(
-                embed=discord.Embed(
-                    title="Siren Alert!",
-                    description=f"**Locations:**\n {sirens_formatted}",
-                    color=0xFF0000,
-                ).add_field(
+            common_zones = ", ".join(x[0] for x in self.get_common_zones(result_sirens))
+
+            embed = discord.Embed(
+                title="Siren Alert!",
+                description=f"**Locations:**\n {sirens_formatted}",
+                color=0xFF0000,
+            )
+            if common_zones:
+                embed.add_field(
                     name="Common Zones",
                     value=", ".join(x[0] for x in self.get_common_zones(result_sirens)),
                 )
-            )
+
+            message = await channel.send(embed=embed)
 
             await message.add_reaction("🟥")
 
     @staticmethod
     def get_common_zones(sirens: List[Siren]) -> List[Tuple[str, int]]:
         return collections.Counter(
-            [x.city.zone.en for x in sirens if isinstance(x.city, pikudhaoref.City)]
+            [x.city.zone.en for x in sirens if x.city.zone.en]
         ).most_common(5)
 
     @staticmethod
