@@ -8,6 +8,7 @@ from typing import List, Tuple, TYPE_CHECKING
 import discord
 import discordSuperUtils
 import pikudhaoref
+from pikudhaoref.utils import create_map_url_from_cities
 from discord.ext import commands
 
 from .customization import select_custom
@@ -276,6 +277,14 @@ class Sirens(commands.Cog):
                 description=f"**Locations:**\n {sirens_formatted}",
                 color=0xFF0000,
             )
+
+            # Used the pikudhaoref util function and not client.create_map to save time and not upload a whole picture.
+            embed.set_image(
+                url=create_map_url_from_cities(
+                    [x.city for x in result_sirens if x.city.lng]
+                )
+            )
+
             if common_zones:
                 embed.add_field(
                     name="Common Zones",
