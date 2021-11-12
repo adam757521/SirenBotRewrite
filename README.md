@@ -7,6 +7,7 @@ Features
 - Set siren channels.
 - Test sirens.
 - History commands.
+- Siren map.
 
 Installation
 ------------
