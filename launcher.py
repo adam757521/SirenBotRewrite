@@ -9,7 +9,7 @@ def main():
         command_prefix=bot.Bot.PREFIX,
         intents=discord.Intents.all(),
         help_command=None,
-    ).run()
+    ).run(cogs_directory="bot/cogs")
 
 
 if __name__ == "__main__":
