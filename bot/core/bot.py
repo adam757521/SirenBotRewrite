@@ -26,7 +26,7 @@ class SirenBot(discordSuperUtils.DatabaseClient):
 
         await self.client.initialize()
 
-        self.database = discordSuperUtils.DatabaseManager.connect(  # Typehint in dsu.
+        self.database = discordSuperUtils.DatabaseManager.connect(
             await aiosqlite.connect("main.sqlite")
         )
         await self.database.create_table(
