@@ -319,6 +319,22 @@ class Sirens(commands.Cog):
             ),
         )
 
+    @commands.command()
+    async def lookup(self, ctx, city_name: str) -> None:
+        city = self.bot.client.get_city(city_name)
+        if not city.name.en:
+            raise commands.BadArgument(f"'{city_name}' is not a valid city.")
+
+        assert isinstance(city, pikudhaoref.City)
+        embed = discord.Embed(
+            title=f"City '{city_name}' found!",
+            color=0xFF0000,
+        )
+        embed.add_field(name="City Name", value=city.name.en, inline=False)
+        embed.add_field(name="Zone", value=city.zone.en, inline=False)
+        embed.add_field(name="Countdown", value=city.countdown.en, inline=False)
+        await ctx.send(embed=embed)
+
     @commands.group(invoke_without_command=True)
     async def history(self, ctx, mode: str):
         modes = {

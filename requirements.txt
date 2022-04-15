@@ -1,4 +1,4 @@
 discord~=1.7.3
 discordSuperUtils==0.3.0
 aiosqlite~=0.17.0
-pikudhaoref.py==0.0.7
+pikudhaoref.py==0.0.8
