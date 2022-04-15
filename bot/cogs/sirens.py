@@ -243,6 +243,9 @@ class Sirens(commands.Cog):
     def _format_city(self, city: pikudhaoref.City) -> str:
         return f"City: {self._get_city_name(city)}, Zone: {city.zone.en}, Countdown: {city.countdown.seconds}"
 
+    def _filter_sirens_by_cities(self, sirens: List[pikudhaoref.Siren], cities: List[str], zones: List[str]) -> List[pikudhaoref.Siren]:
+        return [siren for siren in sirens if self._check_city_whitelisted(siren.city, cities, zones)]
+
     async def on_siren(self, sirens: List[Siren]):
         while not self.bot.database:
             await asyncio.sleep(1)
@@ -255,14 +258,7 @@ class Sirens(commands.Cog):
             if not channel:
                 continue
 
-            result_sirens = []
-            for siren in sirens:
-                if cities or zones:
-                    if not self._check_city_whitelisted(siren.city, cities, zones):
-                        continue
-
-                result_sirens.append(siren)
-
+            result_sirens = self._filter_sirens_by_cities(sirens, cities, zones)
             if not result_sirens:
                 continue
 
